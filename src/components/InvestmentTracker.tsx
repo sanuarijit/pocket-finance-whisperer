@@ -260,7 +260,7 @@ const InvestmentTracker = () => {
           </div>
         </div>
 
-        {(newInvestment.type === 'fd') && (
+        {newInvestment.type === 'fd' && (
           <div>
             <Label htmlFor="maturity">Maturity Date (Optional)</Label>
             <Input

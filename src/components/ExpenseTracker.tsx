@@ -50,7 +50,7 @@ const ExpenseTracker = () => {
     amount: '',
     category: '',
     description: '',
-    type: 'variable' as const
+    type: 'variable' as 'fixed' | 'variable' | 'discretionary'
   });
 
   const categories = [
