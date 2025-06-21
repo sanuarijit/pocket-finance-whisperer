@@ -14,6 +14,9 @@ import IncomeTracker from '@/components/IncomeTracker';
 import BankBalanceTracker from '@/components/BankBalanceTracker';
 import FinancialForecast from '@/components/FinancialForecast';
 import QuickActions from '@/components/QuickActions';
+import { AffordabilityAnalyzer } from '@/components/AffordabilityAnalyzer';
+import { FinancialHealthDashboard } from '@/components/FinancialHealthDashboard';
+import { EMICalculator } from '@/components/EMICalculator';
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -46,6 +49,26 @@ const Index = () => {
   const totalBankBalance = bankBalances.reduce((sum, balance) => sum + balance.balance, 0);
   const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
   const netWorth = totalBankBalance - totalDebt;
+  const disposableIncome = monthlyIncome - monthlySpent - totalEMIs;
+  
+  // Financial Health Score calculation
+  const emergencyFundMonths = totalBankBalance / (monthlySpent + totalEMIs || 1);
+  const debtToIncomeRatio = totalDebt / (totalIncome * 12 || 1);
+  const savingsRate = (disposableIncome / monthlyIncome || 0) * 100;
+  
+  let healthScore = 50; // Base score
+  if (emergencyFundMonths >= 6) healthScore += 20;
+  else if (emergencyFundMonths >= 3) healthScore += 10;
+  
+  if (debtToIncomeRatio < 0.2) healthScore += 15;
+  else if (debtToIncomeRatio < 0.4) healthScore += 5;
+  else healthScore -= 10;
+  
+  if (savingsRate >= 20) healthScore += 15;
+  else if (savingsRate >= 10) healthScore += 5;
+  else if (savingsRate < 0) healthScore -= 15;
+  
+  const finalHealthScore = Math.max(0, Math.min(100, healthScore));
   
   // Calculate budget based on income vs expenses
   const monthlyBudget = monthlyIncome > 0 ? monthlyIncome : 40000;
@@ -79,22 +102,40 @@ const Index = () => {
       <div className="grid grid-cols-2 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
           <CardContent className="p-4">
-            <div className="text-sm text-blue-600 dark:text-blue-400">Today's Expense</div>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">₹{todayExpense.toLocaleString()}</div>
-            <div className="text-xs text-blue-500">of ₹{plannedExpense.toLocaleString()} planned</div>
+            <div className="text-sm text-blue-600 dark:text-blue-400">Net Worth</div>
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">₹{netWorth.toLocaleString()}</div>
+            <div className="text-xs text-blue-500">Assets - Debts</div>
           </CardContent>
         </Card>
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
           <CardContent className="p-4">
-            <div className="text-sm text-green-600 dark:text-green-400">Bank Balance</div>
+            <div className="text-sm text-green-600 dark:text-green-400">Available Cash</div>
             <div className="text-2xl font-bold text-green-700 dark:text-green-300">₹{totalBankBalance.toLocaleString()}</div>
-            <div className="text-xs text-green-500">
-              {bankBalances.length} account{bankBalances.length !== 1 ? 's' : ''}
-            </div>
+            <div className="text-xs text-green-500">Current balance</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Financial Health Score */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            Financial Health Score
+            <Badge variant={finalHealthScore >= 70 ? 'default' : finalHealthScore >= 50 ? 'secondary' : 'destructive'}>
+              {finalHealthScore}/100
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Progress value={finalHealthScore} className="h-3 mb-3" />
+          <div className="text-sm text-muted-foreground">
+            {finalHealthScore >= 70 ? 'Excellent financial health! Keep it up.' : 
+             finalHealthScore >= 50 ? 'Good progress. Focus on building emergency fund.' : 
+             'Needs attention. Review expenses and increase savings.'}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Monthly Progress */}
       <Card>
@@ -175,6 +216,39 @@ const Index = () => {
     <div className={`min-h-screen bg-background ${isDarkMode ? 'dark' : ''}`}>
       <div className="container max-w-md mx-auto p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Top Navigation for Financial Tools */}
+          <div className="bg-background border-b border-border mb-6">
+            <div className="flex flex-wrap gap-2 p-4">
+              <Button 
+                variant={activeTab === 'health' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setActiveTab('health')}
+                className="flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Financial Health
+              </Button>
+              <Button 
+                variant={activeTab === 'affordability' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setActiveTab('affordability')}
+                className="flex items-center gap-2"
+              >
+                <Calculator className="h-4 w-4" />
+                Can I Afford?
+              </Button>
+              <Button 
+                variant={activeTab === 'emi' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setActiveTab('emi')}
+                className="flex items-center gap-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                EMI Calculator
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-6">
             <TabsContent value="dashboard" className="mt-0">
               <DashboardOverview />
@@ -203,11 +277,23 @@ const Index = () => {
             <TabsContent value="forecast" className="mt-0">
               <FinancialForecast />
             </TabsContent>
+            
+            <TabsContent value="health" className="mt-0">
+              <FinancialHealthDashboard />
+            </TabsContent>
+            
+            <TabsContent value="affordability" className="mt-0">
+              <AffordabilityAnalyzer />
+            </TabsContent>
+            
+            <TabsContent value="emi" className="mt-0">
+              <EMICalculator />
+            </TabsContent>
           </div>
 
           {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-            <TabsList className="grid w-full grid-cols-5 rounded-none h-16 bg-transparent">
+            <TabsList className="grid w-full grid-cols-4 rounded-none h-16 bg-transparent">
               <TabsTrigger 
                 value="dashboard" 
                 className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"

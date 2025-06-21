@@ -129,6 +129,12 @@ The application handles four main financial entities:
 - June 21, 2025. Added PostgreSQL database integration with full API backend
 - June 21, 2025. Enhanced for personal finance use - added Income and Bank Balance tracking
 - June 21, 2025. Removed unnecessary features (Pay Bill, Transfer) for offline personal use
+- June 21, 2025. Added comprehensive financial decision-making platform:
+  * AffordabilityAnalyzer - Smart purchase decision engine for phones, trips, parties
+  * FinancialHealthDashboard - Net worth tracking, visual projections, emergency fund analysis
+  * EMICalculator - Smart loan affordability with alerts and recommendations
+  * Real-time financial health scoring (0-100) with actionable insights
+  * Complete purchase decision support with budget impact analysis
 
 ## User Preferences
 
