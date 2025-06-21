@@ -54,7 +54,7 @@ const InvestmentTracker = () => {
 
   const [newInvestment, setNewInvestment] = useState({
     name: '',
-    type: 'mf' as const,
+    type: 'mf' as 'pf' | 'fd' | 'mf' | 'stocks' | 'gold' | 'sip',
     amount: '',
     currentValue: '',
     maturityDate: ''
@@ -226,7 +226,7 @@ const InvestmentTracker = () => {
             id="inv-type"
             className="w-full p-2 border rounded-md bg-background"
             value={newInvestment.type}
-            onChange={(e) => setNewInvestment({...newInvestment, type: e.target.value as any})}
+            onChange={(e) => setNewInvestment({...newInvestment, type: e.target.value as 'pf' | 'fd' | 'mf' | 'stocks' | 'gold' | 'sip'})}
           >
             <option value="mf">Mutual Fund</option>
             <option value="pf">Provident Fund</option>
