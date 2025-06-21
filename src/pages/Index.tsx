@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Home, CreditCard, TrendingUp, Calculator, Settings, Moon, Sun } from 'lucide-react';
+import { Home, CreditCard, TrendingUp, Calculator, Settings, Moon, Sun } from 'lucide-react';
+import { useExpenses, useDebts } from '@/hooks/useDatabase';
 import ExpenseTracker from '@/components/ExpenseTracker';
 import DebtManager from '@/components/DebtManager';
 import InvestmentTracker from '@/components/InvestmentTracker';
@@ -15,26 +16,37 @@ import QuickActions from '@/components/QuickActions';
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { expenses } = useExpenses();
+  const { debts } = useDebts();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
   };
 
-  // Mock data for dashboard
-  const dashboardData = {
-    todayExpense: 1250,
-    plannedExpense: 1500,
-    monthlySpent: 24500,
-    monthlyBudget: 40000,
-    totalDebt: 185000,
-    totalAssets: 245000,
-    netWorth: 60000,
-    upcomingEMIs: [
-      { name: 'Home Loan', amount: 12500, dueDate: '2025-06-25' },
-      { name: 'Car Loan', amount: 8900, dueDate: '2025-06-28' },
-    ]
-  };
+  // Calculate real data from database
+  const today = new Date().toISOString().split('T')[0];
+  const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+  
+  const todayExpenses = expenses.filter(expense => expense.date === today);
+  const thisMonthExpenses = expenses.filter(expense => expense.date.startsWith(thisMonth));
+  
+  const todayExpense = todayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const monthlySpent = thisMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalDebt = debts.reduce((sum, debt) => sum + debt.currentBalance, 0);
+  const totalEMIs = debts.reduce((sum, debt) => sum + debt.emi, 0);
+  
+  // Mock budget and targets (these could be stored in settings later)
+  const plannedExpense = 1500;
+  const monthlyBudget = 40000;
+  const totalAssets = 245000;
+  const netWorth = totalAssets - totalDebt;
+
+  const upcomingEMIs = debts.slice(0, 2).map(debt => ({
+    name: debt.name,
+    amount: debt.emi,
+    dueDate: '2025-06-25' // This could be calculated based on debt creation date
+  }));
 
   const DashboardOverview = () => (
     <div className="space-y-6">
@@ -59,16 +71,18 @@ const Index = () => {
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400">Today's Expense</div>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">₹{dashboardData.todayExpense.toLocaleString()}</div>
-            <div className="text-xs text-blue-500">of ₹{dashboardData.plannedExpense.toLocaleString()} planned</div>
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">₹{todayExpense.toLocaleString()}</div>
+            <div className="text-xs text-blue-500">of ₹{plannedExpense.toLocaleString()} planned</div>
           </CardContent>
         </Card>
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
           <CardContent className="p-4">
             <div className="text-sm text-green-600 dark:text-green-400">Net Worth</div>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-300">₹{dashboardData.netWorth.toLocaleString()}</div>
-            <div className="text-xs text-green-500">+12% this month</div>
+            <div className="text-2xl font-bold text-green-700 dark:text-green-300">₹{netWorth.toLocaleString()}</div>
+            <div className="text-xs text-green-500">
+              {netWorth >= 0 ? '+' : ''}₹{Math.abs(netWorth - 60000).toLocaleString()} vs last month
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -81,41 +95,62 @@ const Index = () => {
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>₹{dashboardData.monthlySpent.toLocaleString()} spent</span>
-              <span>₹{dashboardData.monthlyBudget.toLocaleString()} budget</span>
+              <span>₹{monthlySpent.toLocaleString()} spent</span>
+              <span>₹{monthlyBudget.toLocaleString()} budget</span>
             </div>
             <Progress 
-              value={(dashboardData.monthlySpent / dashboardData.monthlyBudget) * 100} 
+              value={Math.min((monthlySpent / monthlyBudget) * 100, 100)} 
               className="h-2"
             />
             <div className="text-xs text-muted-foreground">
-              ₹{(dashboardData.monthlyBudget - dashboardData.monthlySpent).toLocaleString()} remaining
+              ₹{Math.max(0, monthlyBudget - monthlySpent).toLocaleString()} remaining
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Data Summary */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-muted-foreground">Total Expenses</div>
+            <div className="text-lg font-bold">{expenses.length}</div>
+            <div className="text-xs text-blue-600">Records stored</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-muted-foreground">Active Debts</div>
+            <div className="text-lg font-bold">{debts.length}</div>
+            <div className="text-xs text-orange-600">₹{totalEMIs.toLocaleString()}/mo EMI</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Upcoming EMIs */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Upcoming EMIs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {dashboardData.upcomingEMIs.map((emi, index) => (
-              <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                <div>
-                  <div className="font-medium">{emi.name}</div>
-                  <div className="text-sm text-muted-foreground">Due: {emi.dueDate}</div>
+      {upcomingEMIs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Upcoming EMIs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {upcomingEMIs.map((emi, index) => (
+                <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <div className="font-medium">{emi.name}</div>
+                    <div className="text-sm text-muted-foreground">Due: {emi.dueDate}</div>
+                  </div>
+                  <Badge variant="outline" className="font-bold">
+                    ₹{emi.amount.toLocaleString()}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="font-bold">
-                  ₹{emi.amount.toLocaleString()}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <QuickActions />

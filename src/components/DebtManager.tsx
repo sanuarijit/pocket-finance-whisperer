@@ -7,44 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calculator, TrendingDown, AlertCircle, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-
-interface Debt {
-  id: string;
-  name: string;
-  principal: number;
-  currentBalance: number;
-  emi: number;
-  interestRate: number;
-  tenure: number;
-  remainingMonths: number;
-}
+import { Calculator, TrendingDown, Plus, Trash2 } from 'lucide-react';
+import { useDebts } from '@/hooks/useDatabase';
+import type { Debt } from '@/services/databaseService';
 
 const DebtManager = () => {
-  const [debts, setDebts] = useState<Debt[]>([
-    {
-      id: '1',
-      name: 'Home Loan',
-      principal: 2500000,
-      currentBalance: 1850000,
-      emi: 12500,
-      interestRate: 8.5,
-      tenure: 240,
-      remainingMonths: 186
-    },
-    {
-      id: '2',
-      name: 'Car Loan',
-      principal: 800000,
-      currentBalance: 450000,
-      emi: 8900,
-      interestRate: 9.2,
-      tenure: 84,
-      remainingMonths: 52
-    }
-  ]);
-
+  const { debts, isLoading, addDebt, deleteDebt } = useDebts();
+  
   const [newDebt, setNewDebt] = useState({
     name: '',
     principal: '',
@@ -58,13 +27,8 @@ const DebtManager = () => {
     amount: ''
   });
 
-  const addDebt = () => {
+  const handleAddDebt = async () => {
     if (!newDebt.name || !newDebt.principal || !newDebt.emi || !newDebt.interestRate || !newDebt.tenure) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill all fields",
-        variant: "destructive"
-      });
       return;
     }
 
@@ -73,12 +37,12 @@ const DebtManager = () => {
     const rate = parseFloat(newDebt.interestRate);
     const tenure = parseInt(newDebt.tenure);
 
-    // Calculate current balance (simplified calculation)
+    // Calculate current balance and remaining months (simplified calculation)
     const monthlyRate = rate / 12 / 100;
     const remainingMonths = Math.ceil(Math.log(1 + (principal * monthlyRate) / emi) / Math.log(1 + monthlyRate));
     const currentBalance = principal * 0.85; // Simplified for demo
 
-    const debt: Debt = {
+    const debt: Omit<Debt, 'created_at'> = {
       id: Date.now().toString(),
       name: newDebt.name,
       principal,
@@ -89,13 +53,12 @@ const DebtManager = () => {
       remainingMonths
     };
 
-    setDebts([...debts, debt]);
+    await addDebt(debt);
     setNewDebt({ name: '', principal: '', emi: '', interestRate: '', tenure: '' });
-    
-    toast({
-      title: "Debt Added",
-      description: `${debt.name} has been added successfully`,
-    });
+  };
+
+  const handleDeleteDebt = async (id: string) => {
+    await deleteDebt(id);
   };
 
   const calculatePrepaymentImpact = (debt: Debt, prepayAmount: number) => {
@@ -124,6 +87,14 @@ const DebtManager = () => {
   const totalDebt = debts.reduce((sum, debt) => sum + debt.currentBalance, 0);
   const totalEMI = debts.reduce((sum, debt) => sum + debt.emi, 0);
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">Loading debts...</div>
+      </div>
+    );
+  }
+
   const DebtOverview = () => (
     <div className="space-y-4">
       {/* Summary Cards */}
@@ -144,39 +115,57 @@ const DebtManager = () => {
       </div>
 
       {/* Debt List */}
-      <div className="space-y-3">
-        {debts.map((debt) => {
-          const progress = ((debt.principal - debt.currentBalance) / debt.principal) * 100;
-          const totalInterest = (debt.remainingMonths * debt.emi) - debt.currentBalance;
-          
-          return (
-            <Card key={debt.id}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold">{debt.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {debt.interestRate}% • {debt.remainingMonths} months left
-                    </p>
+      {debts.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No debts recorded yet. Add your debts to track and manage them effectively.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {debts.map((debt) => {
+            const progress = ((debt.principal - debt.currentBalance) / debt.principal) * 100;
+            const totalInterest = (debt.remainingMonths * debt.emi) - debt.currentBalance;
+            
+            return (
+              <Card key={debt.id}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold">{debt.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {debt.interestRate}% • {debt.remainingMonths} months left
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">₹{debt.emi.toLocaleString()}/mo</Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteDebt(debt.id)}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="outline">₹{debt.emi.toLocaleString()}/mo</Badge>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>₹{debt.currentBalance.toLocaleString()} remaining</span>
-                    <span>{progress.toFixed(1)}% paid</span>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>₹{debt.currentBalance.toLocaleString()} remaining</span>
+                      <span>{progress.toFixed(1)}% paid</span>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                    <div className="text-xs text-muted-foreground">
+                      Total interest remaining: ₹{totalInterest.toLocaleString()}
+                    </div>
                   </div>
-                  <Progress value={progress} className="h-2" />
-                  <div className="text-xs text-muted-foreground">
-                    Total interest remaining: ₹{totalInterest.toLocaleString()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -246,7 +235,7 @@ const DebtManager = () => {
           </div>
         </div>
 
-        <Button onClick={addDebt} className="w-full">
+        <Button onClick={handleAddDebt} className="w-full">
           Add Debt
         </Button>
       </CardContent>

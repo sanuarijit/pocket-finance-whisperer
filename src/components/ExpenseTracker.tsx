@@ -6,46 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, Wallet } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-
-interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  description: string;
-  date: string;
-  type: 'fixed' | 'variable' | 'discretionary';
-}
+import { Plus, Wallet, Trash2 } from 'lucide-react';
+import { useExpenses } from '@/hooks/useDatabase';
+import type { Expense } from '@/services/databaseService';
 
 const ExpenseTracker = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: '1',
-      amount: 500,
-      category: 'Food',
-      description: 'Zomato - Lunch',
-      date: '2025-06-21',
-      type: 'variable'
-    },
-    {
-      id: '2',
-      amount: 12500,
-      category: 'EMI',
-      description: 'Home Loan EMI',
-      date: '2025-06-20',
-      type: 'fixed'
-    },
-    {
-      id: '3',
-      amount: 2000,
-      category: 'Entertainment',
-      description: 'Movie tickets',
-      date: '2025-06-19',
-      type: 'discretionary'
-    }
-  ]);
-
+  const { expenses, isLoading, addExpense, deleteExpense } = useExpenses();
+  
   const [newExpense, setNewExpense] = useState({
     amount: '',
     category: '',
@@ -58,17 +25,12 @@ const ExpenseTracker = () => {
     'Medical', 'Fuel', 'Groceries', 'Other'
   ];
 
-  const addExpense = () => {
+  const handleAddExpense = async () => {
     if (!newExpense.amount || !newExpense.category || !newExpense.description) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill all fields",
-        variant: "destructive"
-      });
       return;
     }
 
-    const expense: Expense = {
+    const expense: Omit<Expense, 'created_at'> = {
       id: Date.now().toString(),
       amount: parseFloat(newExpense.amount),
       category: newExpense.category,
@@ -77,13 +39,12 @@ const ExpenseTracker = () => {
       type: newExpense.type
     };
 
-    setExpenses([expense, ...expenses]);
+    await addExpense(expense);
     setNewExpense({ amount: '', category: '', description: '', type: 'variable' });
-    
-    toast({
-      title: "Expense Added",
-      description: `₹${expense.amount} expense recorded successfully`,
-    });
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    await deleteExpense(id);
   };
 
   const getTypeColor = (type: string) => {
@@ -96,6 +57,14 @@ const ExpenseTracker = () => {
   };
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">Loading expenses...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -176,7 +145,7 @@ const ExpenseTracker = () => {
             </Select>
           </div>
 
-          <Button onClick={addExpense} className="w-full">
+          <Button onClick={handleAddExpense} className="w-full">
             Add Expense
           </Button>
         </CardContent>
@@ -185,45 +154,58 @@ const ExpenseTracker = () => {
       {/* Expense List */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Expenses</CardTitle>
+          <CardTitle>Recent Expenses ({expenses.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {expenses.map((expense) => (
-              <div key={expense.id} className="flex justify-between items-start p-3 rounded-lg bg-muted/50">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{expense.description}</span>
-                    <Badge className={getTypeColor(expense.type)}>
-                      {expense.type}
-                    </Badge>
+          {expenses.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              No expenses recorded yet. Add your first expense above!
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {expenses.map((expense) => (
+                <div key={expense.id} className="flex justify-between items-start p-3 rounded-lg bg-muted/50">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{expense.description}</span>
+                      <Badge className={getTypeColor(expense.type)}>
+                        {expense.type}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {expense.category} • {expense.date}
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {expense.category} • {expense.date}
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <div className="font-bold">₹{expense.amount.toLocaleString()}</div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold">₹{expense.amount.toLocaleString()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* SMS Integration Note */}
-      <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+      {/* Database Status */}
+      <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <Wallet className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <Wallet className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div>
-              <div className="font-medium text-blue-800 dark:text-blue-200">SMS Auto-Import</div>
-              <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                Enable SMS permissions to automatically capture UPI, credit card, and bank transaction messages.
+              <div className="font-medium text-green-800 dark:text-green-200">Local Storage Active</div>
+              <div className="text-sm text-green-600 dark:text-green-400 mt-1">
+                Your data is safely stored on your device and works completely offline. No internet required!
               </div>
-              <Button variant="outline" size="sm" className="mt-2 border-blue-300 text-blue-700 hover:bg-blue-100">
-                Enable SMS Access
-              </Button>
             </div>
           </div>
         </CardContent>
