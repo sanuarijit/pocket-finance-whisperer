@@ -3,7 +3,7 @@ import App from './App.tsx'
 import './index.css'
 import { CapacitorService } from './services/capacitorService'
 import { defineCustomElements as jeepSqliteDefineCustomElements } from 'jeep-sqlite/loader'
-import { setupSQLite } from 'jeep-sqlite/dist/sqlite-setup'
+import { setupSQLite } from 'jeep-sqlite/loader'
 
 // Initialize the app
 const initApp = async () => {
