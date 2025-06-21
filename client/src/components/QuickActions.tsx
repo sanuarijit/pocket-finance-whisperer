@@ -2,33 +2,40 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Wallet, CreditCard, TrendingUp, Calculator } from 'lucide-react';
+import { Plus, TrendingUp, Wallet, PiggyBank } from 'lucide-react';
 
-const QuickActions = () => {
+interface QuickActionsProps {
+  onAddExpense?: () => void;
+  onAddIncome?: () => void;
+  onAddBankBalance?: () => void;
+  onViewSummary?: () => void;
+}
+
+const QuickActions = ({ onAddExpense, onAddIncome, onAddBankBalance, onViewSummary }: QuickActionsProps) => {
   const actions = [
     {
       icon: Plus,
       label: 'Add Expense',
-      color: 'bg-blue-500 hover:bg-blue-600',
-      action: () => console.log('Add expense clicked')
+      color: 'bg-red-500 hover:bg-red-600',
+      action: onAddExpense || (() => console.log('Add expense clicked'))
+    },
+    {
+      icon: TrendingUp,
+      label: 'Add Income',
+      color: 'bg-green-500 hover:bg-green-600',
+      action: onAddIncome || (() => console.log('Add income clicked'))
     },
     {
       icon: Wallet,
-      label: 'Transfer',
-      color: 'bg-green-500 hover:bg-green-600',
-      action: () => console.log('Transfer clicked')
+      label: 'Bank Balance',
+      color: 'bg-blue-500 hover:bg-blue-600',
+      action: onAddBankBalance || (() => console.log('Add bank balance clicked'))
     },
     {
-      icon: CreditCard,
-      label: 'Pay Bill',
-      color: 'bg-orange-500 hover:bg-orange-600',
-      action: () => console.log('Pay bill clicked')
-    },
-    {
-      icon: Calculator,
-      label: 'Calculator',
+      icon: PiggyBank,
+      label: 'Summary',
       color: 'bg-purple-500 hover:bg-purple-600',
-      action: () => console.log('Calculator clicked')
+      action: onViewSummary || (() => console.log('View summary clicked'))
     }
   ];
 

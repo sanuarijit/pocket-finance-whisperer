@@ -29,6 +29,25 @@ export interface Investment {
   created_at?: string;
 }
 
+export interface Income {
+  id: string;
+  amount: number;
+  source: string;
+  description: string;
+  date: string;
+  type: 'salary' | 'freelance' | 'business' | 'investment' | 'other';
+  created_at?: string;
+}
+
+export interface BankBalance {
+  id: string;
+  bankName: string;
+  accountType: 'savings' | 'current' | 'fd' | 'other';
+  balance: number;
+  date: string;
+  created_at?: string;
+}
+
 class DatabaseService {
   private isInitialized = false;
 
@@ -53,6 +72,12 @@ class DatabaseService {
       }
       if (!localStorage.getItem('moneywise_settings')) {
         localStorage.setItem('moneywise_settings', JSON.stringify({}));
+      }
+      if (!localStorage.getItem('moneywise_income')) {
+        localStorage.setItem('moneywise_income', JSON.stringify([]));
+      }
+      if (!localStorage.getItem('moneywise_bank_balances')) {
+        localStorage.setItem('moneywise_bank_balances', JSON.stringify([]));
       }
       
       this.isInitialized = true;
@@ -169,6 +194,75 @@ class DatabaseService {
     localStorage.setItem('moneywise_investments', JSON.stringify(filteredInvestments));
   }
 
+  // Income operations
+  async addIncome(income: Omit<Income, 'created_at'>): Promise<void> {
+    if (!this.isInitialized) await this.initialize();
+
+    const incomes = await this.getIncomes();
+    const newIncome: Income = {
+      ...income,
+      created_at: new Date().toISOString()
+    };
+    
+    incomes.push(newIncome);
+    localStorage.setItem('moneywise_income', JSON.stringify(incomes));
+  }
+
+  async getIncomes(): Promise<Income[]> {
+    if (!this.isInitialized) await this.initialize();
+    
+    const incomes = localStorage.getItem('moneywise_income');
+    return incomes ? JSON.parse(incomes) : [];
+  }
+
+  async deleteIncome(id: string): Promise<void> {
+    if (!this.isInitialized) await this.initialize();
+
+    const incomes = await this.getIncomes();
+    const filteredIncomes = incomes.filter(income => income.id !== id);
+    localStorage.setItem('moneywise_income', JSON.stringify(filteredIncomes));
+  }
+
+  // Bank Balance operations
+  async addBankBalance(bankBalance: Omit<BankBalance, 'created_at'>): Promise<void> {
+    if (!this.isInitialized) await this.initialize();
+
+    const bankBalances = await this.getBankBalances();
+    const newBankBalance: BankBalance = {
+      ...bankBalance,
+      created_at: new Date().toISOString()
+    };
+    
+    bankBalances.push(newBankBalance);
+    localStorage.setItem('moneywise_bank_balances', JSON.stringify(bankBalances));
+  }
+
+  async getBankBalances(): Promise<BankBalance[]> {
+    if (!this.isInitialized) await this.initialize();
+    
+    const bankBalances = localStorage.getItem('moneywise_bank_balances');
+    return bankBalances ? JSON.parse(bankBalances) : [];
+  }
+
+  async updateBankBalance(bankBalance: BankBalance): Promise<void> {
+    if (!this.isInitialized) await this.initialize();
+
+    const bankBalances = await this.getBankBalances();
+    const index = bankBalances.findIndex(b => b.id === bankBalance.id);
+    if (index !== -1) {
+      bankBalances[index] = bankBalance;
+      localStorage.setItem('moneywise_bank_balances', JSON.stringify(bankBalances));
+    }
+  }
+
+  async deleteBankBalance(id: string): Promise<void> {
+    if (!this.isInitialized) await this.initialize();
+
+    const bankBalances = await this.getBankBalances();
+    const filteredBankBalances = bankBalances.filter(balance => balance.id !== id);
+    localStorage.setItem('moneywise_bank_balances', JSON.stringify(filteredBankBalances));
+  }
+
   async setSetting(key: string, value: string): Promise<void> {
     if (!this.isInitialized) await this.initialize();
 
@@ -184,15 +278,17 @@ class DatabaseService {
     return settings[key] || null;
   }
 
-  async exportData(): Promise<{ expenses: Expense[], debts: Debt[], investments: Investment[] }> {
+  async exportData(): Promise<{ expenses: Expense[], debts: Debt[], investments: Investment[], incomes: Income[], bankBalances: BankBalance[] }> {
     const expenses = await this.getExpenses();
     const debts = await this.getDebts();
     const investments = await this.getInvestments();
+    const incomes = await this.getIncomes();
+    const bankBalances = await this.getBankBalances();
     
-    return { expenses, debts, investments };
+    return { expenses, debts, investments, incomes, bankBalances };
   }
 
-  async importData(data: { expenses?: Expense[], debts?: Debt[], investments?: Investment[] }): Promise<void> {
+  async importData(data: { expenses?: Expense[], debts?: Debt[], investments?: Investment[], incomes?: Income[], bankBalances?: BankBalance[] }): Promise<void> {
     if (!this.isInitialized) await this.initialize();
 
     if (data.expenses) {
@@ -203,6 +299,12 @@ class DatabaseService {
     }
     if (data.investments) {
       localStorage.setItem('moneywise_investments', JSON.stringify(data.investments));
+    }
+    if (data.incomes) {
+      localStorage.setItem('moneywise_income', JSON.stringify(data.incomes));
+    }
+    if (data.bankBalances) {
+      localStorage.setItem('moneywise_bank_balances', JSON.stringify(data.bankBalances));
     }
   }
 

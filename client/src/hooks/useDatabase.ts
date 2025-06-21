@@ -94,6 +94,86 @@ export const useExpenses = () => {
   return { expenses, isLoading, addExpense, deleteExpense, refreshExpenses: loadExpenses };
 };
 
+export const useIncomes = () => {
+  const { isInitialized } = useDatabase();
+  const [incomes, setIncomes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const addIncome = async (income: any) => {
+    await databaseService.addIncome(income);
+    const updatedIncomes = await databaseService.getIncomes();
+    setIncomes(updatedIncomes);
+  };
+
+  const deleteIncome = async (id: string) => {
+    await databaseService.deleteIncome(id);
+    const updatedIncomes = await databaseService.getIncomes();
+    setIncomes(updatedIncomes);
+  };
+
+  useEffect(() => {
+    const loadIncomes = async () => {
+      try {
+        const data = await databaseService.getIncomes();
+        setIncomes(data);
+      } catch (error) {
+        console.error('Failed to load incomes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isInitialized) {
+      loadIncomes();
+    }
+  }, [isInitialized]);
+
+  return { incomes, addIncome, deleteIncome, isLoading };
+};
+
+export const useBankBalances = () => {
+  const { isInitialized } = useDatabase();
+  const [bankBalances, setBankBalances] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const addBankBalance = async (bankBalance: any) => {
+    await databaseService.addBankBalance(bankBalance);
+    const updatedBankBalances = await databaseService.getBankBalances();
+    setBankBalances(updatedBankBalances);
+  };
+
+  const updateBankBalance = async (bankBalance: any) => {
+    await databaseService.updateBankBalance(bankBalance);
+    const updatedBankBalances = await databaseService.getBankBalances();
+    setBankBalances(updatedBankBalances);
+  };
+
+  const deleteBankBalance = async (id: string) => {
+    await databaseService.deleteBankBalance(id);
+    const updatedBankBalances = await databaseService.getBankBalances();
+    setBankBalances(updatedBankBalances);
+  };
+
+  useEffect(() => {
+    const loadBankBalances = async () => {
+      try {
+        const data = await databaseService.getBankBalances();
+        setBankBalances(data);
+      } catch (error) {
+        console.error('Failed to load bank balances:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isInitialized) {
+      loadBankBalances();
+    }
+  }, [isInitialized]);
+
+  return { bankBalances, addBankBalance, updateBankBalance, deleteBankBalance, isLoading };
+};
+
 export const useDebts = () => {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);

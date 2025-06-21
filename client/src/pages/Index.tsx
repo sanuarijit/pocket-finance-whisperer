@@ -6,10 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Home, CreditCard, TrendingUp, Calculator, Settings, Moon, Sun } from 'lucide-react';
-import { useExpenses, useDebts } from '@/hooks/useDatabase';
+import { useExpenses, useDebts, useIncomes, useBankBalances } from '@/hooks/useDatabase';
 import ExpenseTracker from '@/components/ExpenseTracker';
 import DebtManager from '@/components/DebtManager';
 import InvestmentTracker from '@/components/InvestmentTracker';
+import IncomeTracker from '@/components/IncomeTracker';
+import BankBalanceTracker from '@/components/BankBalanceTracker';
 import FinancialForecast from '@/components/FinancialForecast';
 import QuickActions from '@/components/QuickActions';
 
@@ -18,6 +20,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { expenses } = useExpenses();
   const { debts } = useDebts();
+  const { incomes } = useIncomes();
+  const { bankBalances } = useBankBalances();
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -36,11 +40,16 @@ const Index = () => {
   const totalDebt = debts.reduce((sum, debt) => sum + debt.currentBalance, 0);
   const totalEMIs = debts.reduce((sum, debt) => sum + debt.emi, 0);
   
-  // Mock budget and targets (these could be stored in settings later)
-  const plannedExpense = 1500;
-  const monthlyBudget = 40000;
-  const totalAssets = 245000;
-  const netWorth = totalAssets - totalDebt;
+  // Calculate real income and bank balance data
+  const thisMonthIncomes = incomes.filter(income => income.date.startsWith(thisMonth));
+  const monthlyIncome = thisMonthIncomes.reduce((sum, income) => sum + income.amount, 0);
+  const totalBankBalance = bankBalances.reduce((sum, balance) => sum + balance.balance, 0);
+  const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const netWorth = totalBankBalance - totalDebt;
+  
+  // Calculate budget based on income vs expenses
+  const monthlyBudget = monthlyIncome > 0 ? monthlyIncome : 40000;
+  const plannedExpense = monthlyBudget * 0.1; // 10% of monthly budget for daily expenses
 
   const upcomingEMIs = debts.slice(0, 2).map(debt => ({
     name: debt.name,
@@ -78,10 +87,10 @@ const Index = () => {
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
           <CardContent className="p-4">
-            <div className="text-sm text-green-600 dark:text-green-400">Net Worth</div>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-300">₹{netWorth.toLocaleString()}</div>
+            <div className="text-sm text-green-600 dark:text-green-400">Bank Balance</div>
+            <div className="text-2xl font-bold text-green-700 dark:text-green-300">₹{totalBankBalance.toLocaleString()}</div>
             <div className="text-xs text-green-500">
-              {netWorth >= 0 ? '+' : ''}₹{Math.abs(netWorth - 60000).toLocaleString()} vs last month
+              {bankBalances.length} account{bankBalances.length !== 1 ? 's' : ''}
             </div>
           </CardContent>
         </Card>
@@ -153,7 +162,12 @@ const Index = () => {
       )}
 
       {/* Quick Actions */}
-      <QuickActions />
+      <QuickActions 
+        onAddExpense={() => setActiveTab('expenses')}
+        onAddIncome={() => setActiveTab('income')}
+        onAddBankBalance={() => setActiveTab('bankbalance')}
+        onViewSummary={() => setActiveTab('dashboard')}
+      />
     </div>
   );
 
@@ -172,6 +186,14 @@ const Index = () => {
             
             <TabsContent value="debts" className="mt-0">
               <DebtManager />
+            </TabsContent>
+            
+            <TabsContent value="income" className="mt-0">
+              <IncomeTracker />
+            </TabsContent>
+            
+            <TabsContent value="bankbalance" className="mt-0">
+              <BankBalanceTracker />
             </TabsContent>
             
             <TabsContent value="investments" className="mt-0">
@@ -201,25 +223,25 @@ const Index = () => {
                 <span className="text-xs">Expenses</span>
               </TabsTrigger>
               <TabsTrigger 
+                value="income"
+                className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
+              >
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-xs">Income</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="bankbalance"
+                className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="text-xs">Balance</span>
+              </TabsTrigger>
+              <TabsTrigger 
                 value="debts"
                 className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
               >
                 <Calculator className="h-4 w-4" />
                 <span className="text-xs">Debts</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="investments"
-                className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
-              >
-                <TrendingUp className="h-4 w-4" />
-                <span className="text-xs">Assets</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="forecast"
-                className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="text-xs">Forecast</span>
               </TabsTrigger>
             </TabsList>
           </div>
