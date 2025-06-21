@@ -303,3 +303,88 @@ export const useDebts = () => {
 
   return { debts, addDebt, updateDebt, deleteDebt, isLoading };
 };
+
+// Investments hook using React Query
+export const useInvestments = () => {
+  const { data: investments = [], isLoading } = useQuery({
+    queryKey: ['/api/investments'],
+    queryFn: () => apiRequest('/api/investments'),
+  });
+
+  const addInvestmentMutation = useMutation({
+    mutationFn: (investment: any) => apiRequest('/api/investments', {
+      method: 'POST',
+      body: JSON.stringify(investment),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      toast({
+        title: "Success",
+        description: "Investment added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add investment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateInvestmentMutation = useMutation({
+    mutationFn: (investment: any) => apiRequest(`/api/investments/${investment.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(investment),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      toast({
+        title: "Success",
+        description: "Investment updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update investment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteInvestmentMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/investments/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      toast({
+        title: "Success",
+        description: "Investment deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete investment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addInvestment = (investment: any) => {
+    const investmentWithId = { ...investment, id: nanoid() };
+    addInvestmentMutation.mutate(investmentWithId);
+  };
+
+  const updateInvestment = (investment: any) => {
+    updateInvestmentMutation.mutate(investment);
+  };
+
+  const deleteInvestment = (id: string) => {
+    deleteInvestmentMutation.mutate(id);
+  };
+
+  return { investments, addInvestment, updateInvestment, deleteInvestment, isLoading };
+};

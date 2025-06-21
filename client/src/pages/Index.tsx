@@ -17,6 +17,7 @@ import QuickActions from '@/components/QuickActions';
 import { AffordabilityAnalyzer } from '@/components/AffordabilityAnalyzer';
 import { FinancialHealthDashboard } from '@/components/FinancialHealthDashboard';
 import { EMICalculator } from '@/components/EMICalculator';
+import { SavingsInvestmentTracker } from '@/components/SavingsInvestmentTracker';
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -271,7 +272,7 @@ const Index = () => {
             </TabsContent>
             
             <TabsContent value="investments" className="mt-0">
-              <InvestmentTracker />
+              <SavingsInvestmentTracker />
             </TabsContent>
             
             <TabsContent value="forecast" className="mt-0">
@@ -293,7 +294,7 @@ const Index = () => {
 
           {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-            <TabsList className="grid w-full grid-cols-4 rounded-none h-16 bg-transparent">
+            <TabsList className="grid w-full grid-cols-5 rounded-none h-16 bg-transparent">
               <TabsTrigger 
                 value="dashboard" 
                 className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
@@ -316,17 +317,17 @@ const Index = () => {
                 <span className="text-xs">Income</span>
               </TabsTrigger>
               <TabsTrigger 
-                value="bankbalance"
+                value="investments"
                 className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
               >
-                <Settings className="h-4 w-4" />
-                <span className="text-xs">Balance</span>
+                <Calculator className="h-4 w-4" />
+                <span className="text-xs">Savings</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="debts"
                 className="flex flex-col gap-1 py-2 data-[state=active]:bg-primary/10"
               >
-                <Calculator className="h-4 w-4" />
+                <Settings className="h-4 w-4" />
                 <span className="text-xs">Debts</span>
               </TabsTrigger>
             </TabsList>
