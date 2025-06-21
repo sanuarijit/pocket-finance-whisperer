@@ -125,7 +125,10 @@ The application handles four main financial entities:
 - **Backup Strategy**: PostgreSQL-native backup and recovery procedures
 
 ## Changelog
-- June 21, 2025. Initial setup
+- June 21, 2025. Initial setup - migrated from Lovable to Replit
+- June 21, 2025. Added PostgreSQL database integration with full API backend
+- June 21, 2025. Enhanced for personal finance use - added Income and Bank Balance tracking
+- June 21, 2025. Removed unnecessary features (Pay Bill, Transfer) for offline personal use
 
 ## User Preferences
 

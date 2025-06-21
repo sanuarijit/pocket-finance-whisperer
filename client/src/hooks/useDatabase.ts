@@ -1,256 +1,305 @@
-
-import { useEffect, useState } from 'react';
-import { databaseService, type Expense, type Debt, type Investment } from '@/services/databaseService';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { nanoid } from 'nanoid';
 import { toast } from '@/hooks/use-toast';
 
+// Simple database status hook - API is always ready
 export const useDatabase = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const initDatabase = async () => {
-      try {
-        await databaseService.initialize();
-        setIsInitialized(true);
-        console.log('Database hook initialized');
-      } catch (error) {
-        console.error('Database initialization failed:', error);
-        toast({
-          title: "Database Error",
-          description: "Failed to initialize local database",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initDatabase();
-  }, []);
-
-  return { isInitialized, isLoading };
+  return { isInitialized: true, isLoading: false };
 };
 
+// Expenses hook using React Query
 export const useExpenses = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: expenses = [], isLoading } = useQuery({
+    queryKey: ['/api/expenses'],
+    queryFn: () => apiRequest('/api/expenses'),
+  });
 
-  const loadExpenses = async () => {
-    try {
-      const data = await databaseService.getExpenses();
-      setExpenses(data);
-    } catch (error) {
-      console.error('Failed to load expenses:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load expenses",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addExpense = async (expense: Omit<Expense, 'created_at'>) => {
-    try {
-      await databaseService.addExpense(expense);
-      await loadExpenses();
+  const addExpenseMutation = useMutation({
+    mutationFn: (expense: any) => apiRequest('/api/expenses', {
+      method: 'POST',
+      body: JSON.stringify(expense),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       toast({
         title: "Success",
         description: "Expense added successfully",
       });
-    } catch (error) {
-      console.error('Failed to add expense:', error);
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to add expense",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  const deleteExpense = async (id: string) => {
-    try {
-      await databaseService.deleteExpense(id);
-      await loadExpenses();
+  const deleteExpenseMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/expenses/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       toast({
         title: "Success",
         description: "Expense deleted successfully",
       });
-    } catch (error) {
-      console.error('Failed to delete expense:', error);
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to delete expense",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
+  });
+
+  const addExpense = (expense: any) => {
+    const expenseWithId = { ...expense, id: nanoid() };
+    addExpenseMutation.mutate(expenseWithId);
   };
 
-  useEffect(() => {
-    loadExpenses();
-  }, []);
+  const deleteExpense = (id: string) => {
+    deleteExpenseMutation.mutate(id);
+  };
 
-  return { expenses, isLoading, addExpense, deleteExpense, refreshExpenses: loadExpenses };
+  return { 
+    expenses, 
+    isLoading, 
+    addExpense, 
+    deleteExpense,
+    refreshExpenses: () => queryClient.invalidateQueries({ queryKey: ['/api/expenses'] }),
+  };
 };
 
+// Incomes hook using React Query
 export const useIncomes = () => {
-  const { isInitialized } = useDatabase();
-  const [incomes, setIncomes] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: incomes = [], isLoading } = useQuery({
+    queryKey: ['/api/incomes'],
+    queryFn: () => apiRequest('/api/incomes'),
+  });
 
-  const addIncome = async (income: any) => {
-    await databaseService.addIncome(income);
-    const updatedIncomes = await databaseService.getIncomes();
-    setIncomes(updatedIncomes);
+  const addIncomeMutation = useMutation({
+    mutationFn: (income: any) => apiRequest('/api/incomes', {
+      method: 'POST',
+      body: JSON.stringify(income),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/incomes'] });
+      toast({
+        title: "Success",
+        description: "Income added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add income",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteIncomeMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/incomes/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/incomes'] });
+      toast({
+        title: "Success",
+        description: "Income deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete income",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addIncome = (income: any) => {
+    const incomeWithId = { ...income, id: nanoid() };
+    addIncomeMutation.mutate(incomeWithId);
   };
 
-  const deleteIncome = async (id: string) => {
-    await databaseService.deleteIncome(id);
-    const updatedIncomes = await databaseService.getIncomes();
-    setIncomes(updatedIncomes);
+  const deleteIncome = (id: string) => {
+    deleteIncomeMutation.mutate(id);
   };
-
-  useEffect(() => {
-    const loadIncomes = async () => {
-      try {
-        const data = await databaseService.getIncomes();
-        setIncomes(data);
-      } catch (error) {
-        console.error('Failed to load incomes:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isInitialized) {
-      loadIncomes();
-    }
-  }, [isInitialized]);
 
   return { incomes, addIncome, deleteIncome, isLoading };
 };
 
+// Bank Balances hook using React Query
 export const useBankBalances = () => {
-  const { isInitialized } = useDatabase();
-  const [bankBalances, setBankBalances] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: bankBalances = [], isLoading } = useQuery({
+    queryKey: ['/api/bank-balances'],
+    queryFn: () => apiRequest('/api/bank-balances'),
+  });
 
-  const addBankBalance = async (bankBalance: any) => {
-    await databaseService.addBankBalance(bankBalance);
-    const updatedBankBalances = await databaseService.getBankBalances();
-    setBankBalances(updatedBankBalances);
+  const addBankBalanceMutation = useMutation({
+    mutationFn: (bankBalance: any) => apiRequest('/api/bank-balances', {
+      method: 'POST',
+      body: JSON.stringify(bankBalance),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
+      toast({
+        title: "Success",
+        description: "Bank balance added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add bank balance",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBankBalanceMutation = useMutation({
+    mutationFn: (bankBalance: any) => apiRequest(`/api/bank-balances/${bankBalance.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(bankBalance),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
+      toast({
+        title: "Success",
+        description: "Bank balance updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update bank balance",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteBankBalanceMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/bank-balances/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
+      toast({
+        title: "Success",
+        description: "Bank balance deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete bank balance",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addBankBalance = (bankBalance: any) => {
+    const bankBalanceWithId = { ...bankBalance, id: nanoid() };
+    addBankBalanceMutation.mutate(bankBalanceWithId);
   };
 
-  const updateBankBalance = async (bankBalance: any) => {
-    await databaseService.updateBankBalance(bankBalance);
-    const updatedBankBalances = await databaseService.getBankBalances();
-    setBankBalances(updatedBankBalances);
+  const updateBankBalance = (bankBalance: any) => {
+    updateBankBalanceMutation.mutate(bankBalance);
   };
 
-  const deleteBankBalance = async (id: string) => {
-    await databaseService.deleteBankBalance(id);
-    const updatedBankBalances = await databaseService.getBankBalances();
-    setBankBalances(updatedBankBalances);
+  const deleteBankBalance = (id: string) => {
+    deleteBankBalanceMutation.mutate(id);
   };
-
-  useEffect(() => {
-    const loadBankBalances = async () => {
-      try {
-        const data = await databaseService.getBankBalances();
-        setBankBalances(data);
-      } catch (error) {
-        console.error('Failed to load bank balances:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isInitialized) {
-      loadBankBalances();
-    }
-  }, [isInitialized]);
 
   return { bankBalances, addBankBalance, updateBankBalance, deleteBankBalance, isLoading };
 };
 
+// Debts hook using React Query
 export const useDebts = () => {
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: debts = [], isLoading } = useQuery({
+    queryKey: ['/api/debts'],
+    queryFn: () => apiRequest('/api/debts'),
+  });
 
-  const loadDebts = async () => {
-    try {
-      const data = await databaseService.getDebts();
-      setDebts(data);
-    } catch (error) {
-      console.error('Failed to load debts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load debts",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addDebt = async (debt: Omit<Debt, 'created_at'>) => {
-    try {
-      await databaseService.addDebt(debt);
-      await loadDebts();
+  const addDebtMutation = useMutation({
+    mutationFn: (debt: any) => apiRequest('/api/debts', {
+      method: 'POST',
+      body: JSON.stringify(debt),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt added successfully",
       });
-    } catch (error) {
-      console.error('Failed to add debt:', error);
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to add debt",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  const updateDebt = async (debt: Debt) => {
-    try {
-      await databaseService.updateDebt(debt);
-      await loadDebts();
+  const updateDebtMutation = useMutation({
+    mutationFn: (debt: any) => apiRequest(`/api/debts/${debt.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(debt),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt updated successfully",
       });
-    } catch (error) {
-      console.error('Failed to update debt:', error);
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to update debt",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  const deleteDebt = async (id: string) => {
-    try {
-      await databaseService.deleteDebt(id);
-      await loadDebts();
+  const deleteDebtMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/debts/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt deleted successfully",
       });
-    } catch (error) {
-      console.error('Failed to delete debt:', error);
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to delete debt",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
+  });
+
+  const addDebt = (debt: any) => {
+    const debtWithId = { ...debt, id: nanoid() };
+    addDebtMutation.mutate(debtWithId);
   };
 
-  useEffect(() => {
-    loadDebts();
-  }, []);
+  const updateDebt = (debt: any) => {
+    updateDebtMutation.mutate(debt);
+  };
 
-  return { debts, isLoading, addDebt, updateDebt, deleteDebt, refreshDebts: loadDebts };
+  const deleteDebt = (id: string) => {
+    deleteDebtMutation.mutate(id);
+  };
+
+  return { debts, addDebt, updateDebt, deleteDebt, isLoading };
 };
