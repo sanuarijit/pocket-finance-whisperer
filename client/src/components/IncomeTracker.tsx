@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Plus, Trash2 } from 'lucide-react';
 import { useIncomes } from '@/hooks/useDatabase';
-import { nanoid } from 'nanoid';
 
 const IncomeTracker = () => {
   const { incomes, addIncome, deleteIncome, isLoading } = useIncomes();
@@ -28,7 +27,6 @@ const IncomeTracker = () => {
     }
 
     await addIncome({
-      id: nanoid(),
       amount: parseFloat(formData.amount),
       source: formData.source,
       description: formData.description,
