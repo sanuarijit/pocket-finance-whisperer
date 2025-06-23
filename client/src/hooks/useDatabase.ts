@@ -1,28 +1,24 @@
 
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { databaseService, type Expense, type Debt, type Investment, type Income, type BankBalance } from '@/services/databaseService';
 import { nanoid } from 'nanoid';
 import { toast } from '@/hooks/use-toast';
 
-// Simple database status hook - API is always ready
+// Simple database status hook - localStorage is always ready
 export const useDatabase = () => {
   return { isInitialized: true, isLoading: false };
 };
 
-// Expenses hook using React Query
+// Expenses hook using localStorage
 export const useExpenses = () => {
   const { data: expenses = [], isLoading } = useQuery({
-    queryKey: ['/api/expenses'],
-    queryFn: () => apiRequest('/api/expenses'),
+    queryKey: ['expenses'],
+    queryFn: () => databaseService.getExpenses(),
   });
 
   const addExpenseMutation = useMutation({
-    mutationFn: (expense: any) => apiRequest('/api/expenses', {
-      method: 'POST',
-      body: JSON.stringify(expense),
-    }),
+    mutationFn: (expense: Omit<Expense, 'created_at'>) => databaseService.addExpense(expense),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       toast({
         title: "Success",
         description: "Expense added successfully",
@@ -38,11 +34,8 @@ export const useExpenses = () => {
   });
 
   const deleteExpenseMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/expenses/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: string) => databaseService.deleteExpense(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       toast({
         title: "Success",
         description: "Expense deleted successfully",
@@ -57,7 +50,7 @@ export const useExpenses = () => {
     },
   });
 
-  const addExpense = (expense: any) => {
+  const addExpense = (expense: Omit<Expense, 'id' | 'created_at'>) => {
     const expenseWithId = { ...expense, id: nanoid() };
     addExpenseMutation.mutate(expenseWithId);
   };
@@ -71,24 +64,20 @@ export const useExpenses = () => {
     isLoading, 
     addExpense, 
     deleteExpense,
-    refreshExpenses: () => queryClient.invalidateQueries({ queryKey: ['/api/expenses'] }),
+    refreshExpenses: () => window.location.reload(), // Simple refresh for localStorage
   };
 };
 
-// Incomes hook using React Query
+// Incomes hook using localStorage
 export const useIncomes = () => {
   const { data: incomes = [], isLoading } = useQuery({
-    queryKey: ['/api/incomes'],
-    queryFn: () => apiRequest('/api/incomes'),
+    queryKey: ['incomes'],
+    queryFn: () => databaseService.getIncomes(),
   });
 
   const addIncomeMutation = useMutation({
-    mutationFn: (income: any) => apiRequest('/api/incomes', {
-      method: 'POST',
-      body: JSON.stringify(income),
-    }),
+    mutationFn: (income: Omit<Income, 'created_at'>) => databaseService.addIncome(income),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/incomes'] });
       toast({
         title: "Success",
         description: "Income added successfully",
@@ -104,11 +93,8 @@ export const useIncomes = () => {
   });
 
   const deleteIncomeMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/incomes/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: string) => databaseService.deleteIncome(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/incomes'] });
       toast({
         title: "Success",
         description: "Income deleted successfully",
@@ -123,7 +109,7 @@ export const useIncomes = () => {
     },
   });
 
-  const addIncome = (income: any) => {
+  const addIncome = (income: Omit<Income, 'id' | 'created_at'>) => {
     const incomeWithId = { ...income, id: nanoid() };
     addIncomeMutation.mutate(incomeWithId);
   };
@@ -135,20 +121,16 @@ export const useIncomes = () => {
   return { incomes, addIncome, deleteIncome, isLoading };
 };
 
-// Bank Balances hook using React Query
+// Bank Balances hook using localStorage
 export const useBankBalances = () => {
   const { data: bankBalances = [], isLoading } = useQuery({
-    queryKey: ['/api/bank-balances'],
-    queryFn: () => apiRequest('/api/bank-balances'),
+    queryKey: ['bankBalances'],
+    queryFn: () => databaseService.getBankBalances(),
   });
 
   const addBankBalanceMutation = useMutation({
-    mutationFn: (bankBalance: any) => apiRequest('/api/bank-balances', {
-      method: 'POST',
-      body: JSON.stringify(bankBalance),
-    }),
+    mutationFn: (bankBalance: Omit<BankBalance, 'created_at'>) => databaseService.addBankBalance(bankBalance),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
       toast({
         title: "Success",
         description: "Bank balance added successfully",
@@ -164,12 +146,8 @@ export const useBankBalances = () => {
   });
 
   const updateBankBalanceMutation = useMutation({
-    mutationFn: (bankBalance: any) => apiRequest(`/api/bank-balances/${bankBalance.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(bankBalance),
-    }),
+    mutationFn: (bankBalance: BankBalance) => databaseService.updateBankBalance(bankBalance),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
       toast({
         title: "Success",
         description: "Bank balance updated successfully",
@@ -185,11 +163,8 @@ export const useBankBalances = () => {
   });
 
   const deleteBankBalanceMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/bank-balances/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: string) => databaseService.deleteBankBalance(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/bank-balances'] });
       toast({
         title: "Success",
         description: "Bank balance deleted successfully",
@@ -204,12 +179,12 @@ export const useBankBalances = () => {
     },
   });
 
-  const addBankBalance = (bankBalance: any) => {
+  const addBankBalance = (bankBalance: Omit<BankBalance, 'id' | 'created_at'>) => {
     const bankBalanceWithId = { ...bankBalance, id: nanoid() };
     addBankBalanceMutation.mutate(bankBalanceWithId);
   };
 
-  const updateBankBalance = (bankBalance: any) => {
+  const updateBankBalance = (bankBalance: BankBalance) => {
     updateBankBalanceMutation.mutate(bankBalance);
   };
 
@@ -220,20 +195,16 @@ export const useBankBalances = () => {
   return { bankBalances, addBankBalance, updateBankBalance, deleteBankBalance, isLoading };
 };
 
-// Debts hook using React Query
+// Debts hook using localStorage
 export const useDebts = () => {
   const { data: debts = [], isLoading } = useQuery({
-    queryKey: ['/api/debts'],
-    queryFn: () => apiRequest('/api/debts'),
+    queryKey: ['debts'],
+    queryFn: () => databaseService.getDebts(),
   });
 
   const addDebtMutation = useMutation({
-    mutationFn: (debt: any) => apiRequest('/api/debts', {
-      method: 'POST',
-      body: JSON.stringify(debt),
-    }),
+    mutationFn: (debt: Omit<Debt, 'created_at'>) => databaseService.addDebt(debt),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt added successfully",
@@ -249,12 +220,8 @@ export const useDebts = () => {
   });
 
   const updateDebtMutation = useMutation({
-    mutationFn: (debt: any) => apiRequest(`/api/debts/${debt.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(debt),
-    }),
+    mutationFn: (debt: Debt) => databaseService.updateDebt(debt),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt updated successfully",
@@ -270,11 +237,8 @@ export const useDebts = () => {
   });
 
   const deleteDebtMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/debts/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: string) => databaseService.deleteDebt(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/debts'] });
       toast({
         title: "Success",
         description: "Debt deleted successfully",
@@ -289,12 +253,12 @@ export const useDebts = () => {
     },
   });
 
-  const addDebt = (debt: any) => {
+  const addDebt = (debt: Omit<Debt, 'id' | 'created_at'>) => {
     const debtWithId = { ...debt, id: nanoid() };
     addDebtMutation.mutate(debtWithId);
   };
 
-  const updateDebt = (debt: any) => {
+  const updateDebt = (debt: Debt) => {
     updateDebtMutation.mutate(debt);
   };
 
@@ -305,20 +269,16 @@ export const useDebts = () => {
   return { debts, addDebt, updateDebt, deleteDebt, isLoading };
 };
 
-// Investments hook using React Query
+// Investments hook using localStorage
 export const useInvestments = () => {
   const { data: investments = [], isLoading } = useQuery({
-    queryKey: ['/api/investments'],
-    queryFn: () => apiRequest('/api/investments'),
+    queryKey: ['investments'],
+    queryFn: () => databaseService.getInvestments(),
   });
 
   const addInvestmentMutation = useMutation({
-    mutationFn: (investment: any) => apiRequest('/api/investments', {
-      method: 'POST',
-      body: JSON.stringify(investment),
-    }),
+    mutationFn: (investment: Omit<Investment, 'created_at'>) => databaseService.addInvestment(investment),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
       toast({
         title: "Success",
         description: "Investment added successfully",
@@ -334,12 +294,8 @@ export const useInvestments = () => {
   });
 
   const updateInvestmentMutation = useMutation({
-    mutationFn: (investment: any) => apiRequest(`/api/investments/${investment.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(investment),
-    }),
+    mutationFn: (investment: Investment) => databaseService.updateInvestment(investment),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
       toast({
         title: "Success",
         description: "Investment updated successfully",
@@ -355,11 +311,8 @@ export const useInvestments = () => {
   });
 
   const deleteInvestmentMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/investments/${id}`, {
-      method: 'DELETE',
-    }),
+    mutationFn: (id: string) => databaseService.deleteInvestment(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
       toast({
         title: "Success",
         description: "Investment deleted successfully",
@@ -374,12 +327,12 @@ export const useInvestments = () => {
     },
   });
 
-  const addInvestment = (investment: any) => {
+  const addInvestment = (investment: Omit<Investment, 'id' | 'created_at'>) => {
     const investmentWithId = { ...investment, id: nanoid() };
     addInvestmentMutation.mutate(investmentWithId);
   };
 
-  const updateInvestment = (investment: any) => {
+  const updateInvestment = (investment: Investment) => {
     updateInvestmentMutation.mutate(investment);
   };
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,19 +35,19 @@ const Index = () => {
   const today = new Date().toISOString().split('T')[0];
   const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
   
-  const todayExpenses = expenses.filter(expense => expense.date === today);
-  const thisMonthExpenses = expenses.filter(expense => expense.date.startsWith(thisMonth));
+  const todayExpenses = expenses.filter((expense: any) => expense.date === today);
+  const thisMonthExpenses = expenses.filter((expense: any) => expense.date.startsWith(thisMonth));
   
-  const todayExpense = todayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const monthlySpent = thisMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalDebt = debts.reduce((sum, debt) => sum + debt.currentBalance, 0);
-  const totalEMIs = debts.reduce((sum, debt) => sum + debt.emi, 0);
+  const todayExpense = todayExpenses.reduce((sum: number, expense: any) => sum + expense.amount, 0);
+  const monthlySpent = thisMonthExpenses.reduce((sum: number, expense: any) => sum + expense.amount, 0);
+  const totalDebt = debts.reduce((sum: number, debt: any) => sum + debt.currentBalance, 0);
+  const totalEMIs = debts.reduce((sum: number, debt: any) => sum + debt.emi, 0);
   
   // Calculate real income and bank balance data
-  const thisMonthIncomes = incomes.filter(income => income.date.startsWith(thisMonth));
-  const monthlyIncome = thisMonthIncomes.reduce((sum, income) => sum + income.amount, 0);
-  const totalBankBalance = bankBalances.reduce((sum, balance) => sum + balance.balance, 0);
-  const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const thisMonthIncomes = incomes.filter((income: any) => income.date.startsWith(thisMonth));
+  const monthlyIncome = thisMonthIncomes.reduce((sum: number, income: any) => sum + income.amount, 0);
+  const totalBankBalance = bankBalances.reduce((sum: number, balance: any) => sum + balance.balance, 0);
+  const totalIncome = incomes.reduce((sum: number, income: any) => sum + income.amount, 0);
   const netWorth = totalBankBalance - totalDebt;
   const disposableIncome = monthlyIncome - monthlySpent - totalEMIs;
   
@@ -75,7 +74,7 @@ const Index = () => {
   const monthlyBudget = monthlyIncome > 0 ? monthlyIncome : 40000;
   const plannedExpense = monthlyBudget * 0.1; // 10% of monthly budget for daily expenses
 
-  const upcomingEMIs = debts.slice(0, 2).map(debt => ({
+  const upcomingEMIs = debts.slice(0, 2).map((debt: any) => ({
     name: debt.name,
     amount: debt.emi,
     dueDate: '2025-06-25' // This could be calculated based on debt creation date
@@ -187,7 +186,7 @@ const Index = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {upcomingEMIs.map((emi, index) => (
+              {upcomingEMIs.map((emi: any, index: number) => (
                 <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
                   <div>
                     <div className="font-medium">{emi.name}</div>
